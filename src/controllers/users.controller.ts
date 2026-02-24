@@ -1,6 +1,7 @@
 import { prisma } from "../config/prisma";
 import { NextFunction, Request, Response } from "express";
 import { uuid } from "uuidv4";
+import redisClient from "../utils/redis";
 
 export const createUser = async (req:any, res: any) => {
     try {
@@ -29,6 +30,12 @@ export const currentMonthUsage = async (req: Request, res: Response, next: NextF
     try {
         const { id } = req.params;
         const userId = id as string;
+        const cacheKey = `user:${userId}:currentMonthUsage`;
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
         const usage = await prisma.usageRecords.findMany({
             where: {
                 userId: userId,
@@ -52,7 +59,9 @@ export const currentMonthUsage = async (req: Request, res: Response, next: NextF
         if(remainingQuota < 0) {
             remainingQuota = 0;
         }
-        res.status(200).json({ message: "Current month usage retrieved successfully", totalUsedUnits, activePlan: plan ? plan.plan : "No Active Plan", remainingQuota });
+        const response = { message: "Current month usage retrieved successfully", totalUsedUnits, activePlan: plan ? plan.plan : "No Active Plan", remainingQuota };
+        await redisClient.set(cacheKey, JSON.stringify(response), "EX", 3600);
+        res.status(200).json(response);
     } catch (error) {
         next(error);
     }   
@@ -62,6 +71,13 @@ export const billingSummary = async (req: Request, res: Response, next: NextFunc
     try {
         const { id } = req.params;
         const userId = id as string;
+        const cacheKey = `user:${userId}:billingSummary`;
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
         const usage = await prisma.usageRecords.findMany({
             where: {
                 userId: userId,
@@ -81,7 +97,9 @@ export const billingSummary = async (req: Request, res: Response, next: NextFunc
         });
         const extraUnits = plan ? Math.max(0, totalUsedUnits - plan.plan.monthlyQuota) : totalUsedUnits;
         const extraCharges = plan ? extraUnits * Number(plan.plan.extraChargePerUnit) : 0;
-        res.status(200).json({ message: "Billing summary retrieved successfully", totalUsedUnits, planQuota: plan?.plan.monthlyQuota, extraUnits, extraCharges, currentActivePlan: plan?.plan });
+        const response = { message: "Billing summary retrieved successfully", totalUsedUnits, planQuota: plan?.plan.monthlyQuota, extraUnits, extraCharges, currentActivePlan: plan?.plan };
+        await redisClient.set(cacheKey, JSON.stringify(response), "EX", 3600);
+        res.status(200).json(response);
 
     } catch (error) {
         next(error);

@@ -1,6 +1,7 @@
 import {prisma} from "../config/prisma";
 import {Request, Response} from "express";
 import {uuid} from "uuidv4";
+import redisClient from "../utils/redis";
 
 export const createUsage = async (req: Request, res: Response) => {
     try {
@@ -19,6 +20,11 @@ export const createUsage = async (req: Request, res: Response) => {
                 action
             }
         });
+        const cacheKey = `user:${userId}:*`;
+        const keys = await redisClient.keys(cacheKey);
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
         res.status(201).json({ message: "Usage created successfully", usage });
     } catch (error) {
         console.error(error);
