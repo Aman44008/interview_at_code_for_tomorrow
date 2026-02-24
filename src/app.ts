@@ -7,6 +7,7 @@ import userRoutes from './routes/user.routes';
 import planRoutes from './routes/plan.routes';
 import subsRoutes from './routes/subscription.routes';
 import usageRoutes from './routes/usage.routes';
+import { errorHandler } from './middleware/errorhandler';
 
 const app:Express = express();
 
@@ -19,6 +20,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/plan', planRoutes);
 app.use('/api/subscription', subsRoutes);
 app.use('/api/usage', usageRoutes);
+
+app.use(errorHandler);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Express server!');

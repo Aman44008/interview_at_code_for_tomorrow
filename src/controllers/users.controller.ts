@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { uuid } from "uuidv4";
 
 export const createUser = async (req:any, res: any) => {
@@ -25,7 +25,7 @@ export const createUser = async (req:any, res: any) => {
 };
 
 
-export const currentMonthUsage = async (req: Request, res: Response) => {
+export const currentMonthUsage = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const userId = id as string;
@@ -54,11 +54,11 @@ export const currentMonthUsage = async (req: Request, res: Response) => {
         }
         res.status(200).json({ message: "Current month usage retrieved successfully", totalUsedUnits, activePlan: plan ? plan.plan : "No Active Plan", remainingQuota });
     } catch (error) {
-        res.status(500).json({ message: "Internal server error" });
+        next(error);
     }   
 };
 
-export const billingSummary = async (req: Request, res: Response) => {
+export const billingSummary = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const userId = id as string;
@@ -84,6 +84,6 @@ export const billingSummary = async (req: Request, res: Response) => {
         res.status(200).json({ message: "Billing summary retrieved successfully", totalUsedUnits, planQuota: plan?.plan.monthlyQuota, extraUnits, extraCharges, currentActivePlan: plan?.plan });
 
     } catch (error) {
-        res.status(500).json({ message: "Internal server error" });
+        next(error);
     }
 };
